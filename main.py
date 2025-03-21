@@ -1,9 +1,21 @@
 
-from tkinter import *
+import pygame
 import time
 import math
+from tkinter import *
 
-# ---------------------------- CONSTANTS ------------------------------- #
+# Initialize pygame mixer
+pygame.mixer.init()
+
+# Load sounds
+WORK_DONE_SOUND = "work_done.mp3"
+BREAK_DONE_SOUND = "break_done.mp3"
+
+def play_sound(sound_file):
+    pygame.mixer.music.load(sound_file)
+    pygame.mixer.music.play()
+
+# Constants
 PINK = "#e2979c"
 RED = "#e7305b"
 GREEN = "#9bdeac"
@@ -15,18 +27,12 @@ LONG_BREAK_MIN = 20
 reps = 0
 timer = None
 
-# Timer reset
-def reset_timer():
-    window.after_cancel(timer)
-    canvas.itemconfig(timer_text, text="00:00")
-    title_label.config(text="Timer")
-    check_marks.config(text="")
-    global reps
-    reps = 0
-
-# Timer mechanism-
+# Timer mechanism
 def start_timer():
-    global reps
+    global reps, timer
+    if timer is not None:
+        return
+    
     reps += 1
 
     work_sec = WORK_MIN * 60
@@ -45,22 +51,42 @@ def start_timer():
 
 # Countdown mechanism
 def count_down(count):
+    global timer
+
     count_min = math.floor(count / 60)
     count_sec = count % 60
     if count_sec < 10:
         count_sec = f"0{count_sec}"
 
     canvas.itemconfig(timer_text, text=f"{count_min}:{count_sec}")
+
     if count > 0:
-        global timer
         timer = window.after(1000, count_down, count - 1)
     else:
+        timer = None
+        if reps % 2 == 0:
+            play_sound(WORK_DONE_SOUND)
+        else:
+            play_sound(BREAK_DONE_SOUND)
+
         start_timer()
         marks = ""
         work_sessions = math.floor(reps / 2)
         for _ in range(work_sessions):
             marks += "✔"
         check_marks.config(text=marks)
+
+# Timer reset
+def reset_timer():
+    global reps, timer
+    if timer is not None:
+        window.after_cancel(timer)
+        timer = None
+    canvas.itemconfig(timer_text, text="00:00")
+    title_label.config(text="Timer")
+    check_marks.config(text="")
+    global reps
+    reps = 0
 
 # UI setup 
 window = Tk()
@@ -85,7 +111,5 @@ reset_button.grid(column=2, row=2)
 
 check_marks = Label(fg=GREEN, bg=YELLOW)
 check_marks.grid(column=1 ,row=3)
-
-
 
 window.mainloop()
